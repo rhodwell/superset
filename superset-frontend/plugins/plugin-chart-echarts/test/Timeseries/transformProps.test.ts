@@ -1509,6 +1509,26 @@ test('hides legend selector buttons when showSelectorLegend is false', () => {
   ).toBe(false);
 });
 
+test('reserves space for controls in a top-oriented native scroll legend', () => {
+  const transformed = transformProps(
+    createTestChartProps({
+      formData: {
+        ...formData,
+        legendOrientation: LegendOrientation.Top,
+        legendType: LegendType.Scroll,
+        showLegend: true,
+        showSelectorLegend: true,
+      },
+    }),
+  );
+  const legend = transformed.echartOptions.legend as {
+    right?: number;
+    selector?: false | unknown[];
+  };
+
+  expect(legend).toMatchObject({ right: 250, selector: false });
+});
+
 test.each([
   LegendOrientation.Top,
   LegendOrientation.Bottom,
@@ -1589,6 +1609,7 @@ test('builds interactive items for a Right-oriented custom legend', () => {
       },
     ],
     orientation: LegendOrientation.Right,
+    showHighlight: true,
     showSelectors: true,
   });
 });

@@ -30,7 +30,7 @@ import {
   ensureIsArray,
   createTimeRangeFromGranularity,
 } from '@superset-ui/core';
-import { useTheme } from '@apache-superset/core/theme';
+import { styled, useTheme } from '@apache-superset/core/theme';
 import { GenericDataType } from '@apache-superset/core/common';
 import { logging } from '@apache-superset/core/utils';
 import type {
@@ -39,8 +39,14 @@ import type {
 } from 'echarts/types/src/util/types';
 import type GlobalModel from 'echarts/types/src/model/Global';
 import type ComponentModel from 'echarts/types/src/model/Component';
-import { EchartsHandler, EventHandlers, LegendOrientation } from '../types';
+import {
+  EchartsHandler,
+  EventHandlers,
+  LegendOrientation,
+  LegendType,
+} from '../types';
 import Echart from '../components/Echart';
+import ChartLegendControls from '../components/ChartLegendControls';
 import {
   getViableTimeseriesEchartOptions,
   resolveTimeseriesGridOffset,
@@ -68,6 +74,15 @@ const MAX_CUSTOM_LEGEND_HEIGHT_RATIO = 0.3;
 const MIN_TIMESERIES_PLOT_HEIGHT = 80;
 // Maximum fraction of chart width that a Left/Right HTML legend may occupy.
 const MAX_CUSTOM_LEGEND_WIDTH_RATIO = 0.4;
+const SCROLL_LEGEND_CONTROLS_WIDTH = 240;
+
+const ScrollLegendControlsOverlay = styled.div`
+  position: absolute;
+  right: 8px;
+  top: 0;
+  width: ${SCROLL_LEGEND_CONTROLS_WIDTH}px;
+  z-index: 2;
+`;
 
 // Bound the legend after accounting for the fixed ECharts grid reservations,
 // leaving enough coordinate space for the plot itself to remain usable.
@@ -148,6 +163,7 @@ export default function EchartsTimeseries({
   const { stack } = formData;
   const theme = useTheme();
   const echartRef = useRef<EchartsHandler | null>(null);
+  const restoringLegendSelectionRef = useRef(false);
   const [highlightMode, setHighlightMode] = useState(false);
   const [highlightedSeriesName, setHighlightedSeriesName] = useState<
     string | null
@@ -566,6 +582,21 @@ export default function EchartsTimeseries({
     [xAxisValueIndex],
   );
 
+  const dispatchLegendAction = useCallback(
+    (action: { name?: string; seriesName?: string; type: string }) => {
+      echartRef.current?.getEchartInstance()?.dispatchAction(action);
+    },
+    [],
+  );
+
+  const selectHighlightedSeries = useCallback(
+    (name: string) => {
+      setHighlightedSeriesName(current => (current === name ? null : name));
+      dispatchLegendAction({ type: 'downplay' });
+    },
+    [dispatchLegendAction],
+  );
+
   const legendEventHandlers = useLegendEventHandlers(
     onLegendStateChanged,
     onLegendScroll,
@@ -573,6 +604,31 @@ export default function EchartsTimeseries({
 
   const eventHandlers: EventHandlers = {
     ...legendEventHandlers,
+    legendselectchanged: params => {
+      if (restoringLegendSelectionRef.current) {
+        return;
+      }
+      if (!highlightMode || typeof params.name !== 'string') {
+        legendEventHandlers.legendselectchanged(params);
+        return;
+      }
+
+      const { name, selected } = params;
+      const chart = echartRef.current?.getEchartInstance();
+      const selection = selected?.[name];
+      if (chart && typeof selection === 'boolean') {
+        restoringLegendSelectionRef.current = true;
+        try {
+          chart.dispatchAction({
+            name,
+            type: selection ? 'legendUnSelect' : 'legendSelect',
+          });
+        } finally {
+          restoringLegendSelectionRef.current = false;
+        }
+      }
+      selectHighlightedSeries(name);
+    },
     click: props => {
       // Allow cross-filter by dimensions OR by categorical X-axis (issue #25334)
       if (!hasDimensions && !canCrossFilterByXAxis) {
@@ -845,13 +901,6 @@ export default function EchartsTimeseries({
     },
   };
 
-  const dispatchLegendAction = useCallback(
-    (action: { name?: string; seriesName?: string; type: string }) => {
-      echartRef.current?.getEchartInstance()?.dispatchAction(action);
-    },
-    [],
-  );
-
   const toggleHighlightMode = useCallback(() => {
     if (highlightMode) {
       setHighlightMode(false);
@@ -861,29 +910,6 @@ export default function EchartsTimeseries({
     }
     setHighlightMode(true);
   }, [dispatchLegendAction, highlightMode]);
-
-  const selectHighlightedSeries = useCallback(
-    (name: string) => {
-      const nextName = highlightedSeriesName === name ? null : name;
-      setHighlightedSeriesName(nextName);
-      dispatchLegendAction({ type: 'downplay' });
-      if (nextName) {
-        dispatchLegendAction({ seriesName: nextName, type: 'highlight' });
-      }
-    },
-    [dispatchLegendAction, highlightedSeriesName],
-  );
-
-  useEffect(() => {
-    if (!highlightMode || !highlightedSeriesName) {
-      return;
-    }
-    dispatchLegendAction({ type: 'downplay' });
-    dispatchLegendAction({
-      seriesName: highlightedSeriesName,
-      type: 'highlight',
-    });
-  }, [dispatchLegendAction, highlightedSeriesName, highlightMode]);
 
   const chartBodyHeight = Math.max(height - extraControlHeight, 0);
   const isVerticalLegend =
@@ -905,24 +931,42 @@ export default function EchartsTimeseries({
       ? customLegendMaxWidth !== undefined && customLegendMaxWidth > 0
       : chartBodyHeight > TIMESERIES_CONSTANTS.compactChartHeight &&
         customLegendMaxHeight > 0);
+
+  const shouldRenderScrollLegendControls =
+    !customLegend &&
+    height > TIMESERIES_CONSTANTS.compactChartHeight &&
+    formData.showLegend &&
+    formData.legendType === LegendType.Scroll &&
+    formData.legendOrientation === LegendOrientation.Top &&
+    !(formData.colorByPrimaryAxis && ensureIsArray(groupby).length === 0);
+
   const chartEchartOptions = useMemo(() => {
     const options = getViableTimeseriesEchartOptions(
       echartOptions,
       chartBodyHeight,
       formData.zoomable,
     );
-    if (!highlightMode || !Array.isArray(options.series)) {
+    if (
+      !highlightMode ||
+      !highlightedSeriesName ||
+      !Array.isArray(options.series)
+    ) {
       return options;
     }
     return {
       ...options,
-      series: applyHighlightOpacity(options.series, otherSeriesOpacity),
+      series: applyHighlightOpacity(
+        options.series,
+        highlightedSeriesName,
+        otherSeriesOpacity,
+      ),
     };
   }, [
     chartBodyHeight,
     echartOptions,
     formData.zoomable,
     highlightMode,
+    highlightedSeriesName,
     otherSeriesOpacity,
   ]);
   const renderEchart = ({
@@ -980,6 +1024,25 @@ export default function EchartsTimeseries({
             renderEchart({ chartHeight, chartWidth })
           }
         />
+      ) : shouldRenderScrollLegendControls ? (
+        <div style={{ position: 'relative', height: chartBodyHeight, width }}>
+          <ScrollLegendControlsOverlay>
+            <ChartLegendControls
+              highlightMode={highlightMode}
+              onAll={() => dispatchLegendAction({ type: 'legendAllSelect' })}
+              onHighlightToggle={toggleHighlightMode}
+              onInverse={() =>
+                dispatchLegendAction({ type: 'legendInverseSelect' })
+              }
+              onOtherSeriesOpacityChange={setOtherSeriesOpacity}
+              otherSeriesOpacity={otherSeriesOpacity}
+              overlay
+              showHighlight
+              showSelectors={formData.showSelectorLegend !== false}
+            />
+          </ScrollLegendControlsOverlay>
+          {renderEchart({ chartHeight: chartBodyHeight, chartWidth: width })}
+        </div>
       ) : (
         renderEchart({ chartHeight: chartBodyHeight, chartWidth: width })
       )}

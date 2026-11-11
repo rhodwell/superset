@@ -2170,6 +2170,15 @@ export default function transformProps(
             selector: false, // Hide All/Invert buttons
           }
         : {}),
+      ...(nativeLegendVisible &&
+      effectiveLegendType === LegendType.Scroll &&
+      legendOrientation === LegendOrientation.Top &&
+      !usesPrimaryAxisLegend
+        ? {
+            selector: false,
+            right: 250,
+          }
+        : {}),
     },
     series: renderedSeries,
     // A hidden toolbox still registers its dataZoom feature, which filters

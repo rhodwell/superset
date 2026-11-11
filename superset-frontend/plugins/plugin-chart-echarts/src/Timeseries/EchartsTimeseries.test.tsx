@@ -17,6 +17,7 @@
  * under the License.
  */
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -1771,28 +1772,125 @@ test('reports opacity slider changes in Highlight Mode', () => {
   expect(onOtherSeriesOpacityChange).toHaveBeenCalledWith(0.6);
 });
 
-test('applies opacity to blurred series while preserving existing styles', () => {
+test('renders Highlight controls for a top-oriented scroll legend', () => {
+  render(
+    <EchartsTimeseries
+      {...defaultProps}
+      formData={{
+        ...defaultFormData,
+        legendOrientation: LegendOrientation.Top,
+        legendType: LegendType.Scroll,
+        showLegend: true,
+      }}
+    />,
+  );
+
+  expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inverse' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
+});
+
+test('uses native scroll-legend clicks to select a series in Highlight Mode', () => {
+  render(
+    <EchartsTimeseries
+      {...defaultProps}
+      echartOptions={
+        {
+          series: [
+            { name: 'Alpha', type: 'line', data: [] },
+            { name: 'Beta', type: 'line', data: [] },
+          ],
+        } as EChartsCoreOption
+      }
+      formData={{
+        ...defaultFormData,
+        legendOrientation: LegendOrientation.Top,
+        legendType: LegendType.Scroll,
+        showLegend: true,
+      }}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  const onLegendSelectChanged =
+    getLatestEchartProps().eventHandlers?.legendselectchanged;
+
+  act(() =>
+    onLegendSelectChanged?.({
+      name: 'Alpha',
+      selected: { Alpha: false, Beta: true },
+    }),
+  );
+
+  expect(getLatestEchartProps().echartOptions.series).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Alpha',
+        emphasis: expect.objectContaining({ focus: 'none' }),
+      }),
+      expect.objectContaining({
+        name: 'Beta',
+        itemStyle: expect.objectContaining({ opacity: 0.2 }),
+        lineStyle: expect.objectContaining({ opacity: 0.2 }),
+        emphasis: expect.objectContaining({
+          focus: 'none',
+          itemStyle: expect.objectContaining({ opacity: 0.2 }),
+        }),
+      }),
+    ]),
+  );
+  const renderedSeries = getLatestEchartProps().echartOptions
+    .series as SeriesOption[];
+  expect(renderedSeries[1]).not.toHaveProperty('areaStyle');
+});
+
+test('dims other series without changing selected opacity or adding area fills', () => {
   const series: SeriesOption[] = [
     {
       name: 'Alpha',
       type: 'line',
-      blur: { lineStyle: { width: 2 } },
+      itemStyle: { opacity: 0.8 },
+      lineStyle: { opacity: 0.5, width: 2 },
       emphasis: { itemStyle: { color: 'red' } },
+    },
+    {
+      name: 'Beta',
+      type: 'line',
+      lineStyle: { width: 2 },
+      emphasis: { lineStyle: { width: 3 } },
+    },
+    {
+      name: 'Gamma',
+      type: 'line',
+      areaStyle: { opacity: 0.5 },
     },
   ];
 
-  expect(applyHighlightOpacity(series, 0.6)).toEqual([
+  const highlightedSeries = applyHighlightOpacity(series, 'Alpha', 0.6);
+  expect(highlightedSeries).toEqual([
     expect.objectContaining({
       name: 'Alpha',
-      blur: {
-        areaStyle: { opacity: 0.6 },
-        itemStyle: { opacity: 0.6 },
-        lineStyle: { opacity: 0.6, width: 2 },
-      },
+      itemStyle: { opacity: 0.8 },
+      lineStyle: { opacity: 0.5, width: 2 },
       emphasis: {
-        focus: 'series',
+        focus: 'none',
         itemStyle: { color: 'red' },
       },
     }),
+    expect.objectContaining({
+      name: 'Beta',
+      itemStyle: { opacity: 0.6 },
+      lineStyle: { opacity: 0.6, width: 2 },
+      emphasis: {
+        focus: 'none',
+        itemStyle: { opacity: 0.6 },
+        lineStyle: { opacity: 0.6, width: 3 },
+      },
+    }),
+    expect.objectContaining({
+      name: 'Gamma',
+      areaStyle: { opacity: 0.3 },
+    }),
   ]);
+  expect(highlightedSeries[1]).not.toHaveProperty('areaStyle');
 });

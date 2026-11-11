@@ -918,21 +918,58 @@ export function formatSeriesName(
 
 export function applyHighlightOpacity(
   series: SeriesOption[],
+  highlightedSeriesName: string,
   opacity: number,
 ): SeriesOption[] {
-  return series.map(seriesOption => {
-    const blur = seriesOption.blur ?? {};
+  type OpacityStyle = object & { opacity?: number };
+  type HighlightableSeries = {
+    name?: string | number;
+    areaStyle?: OpacityStyle;
+    itemStyle?: OpacityStyle;
+    lineStyle?: OpacityStyle;
+    emphasis?: {
+      areaStyle?: OpacityStyle;
+      itemStyle?: OpacityStyle;
+      lineStyle?: OpacityStyle;
+    };
+  };
+  const scaleStyleOpacity = (
+    style: OpacityStyle | undefined,
+    createIfMissing = true,
+  ): (OpacityStyle & { opacity: number }) | undefined => {
+    if (!style && !createIfMissing) {
+      return undefined;
+    }
+    const currentOpacity =
+      style && typeof style.opacity === 'number' ? style.opacity : 1;
     return {
-      ...seriesOption,
-      blur: {
-        ...blur,
-        areaStyle: { ...blur.areaStyle, opacity },
-        itemStyle: { ...blur.itemStyle, opacity },
-        lineStyle: { ...blur.lineStyle, opacity },
-      },
+      ...style,
+      opacity: currentOpacity * opacity,
+    };
+  };
+  return series.map(seriesOption => {
+    const highlightableSeries = seriesOption as HighlightableSeries;
+    const emphasis = highlightableSeries.emphasis ?? {};
+    if (String(highlightableSeries.name) === highlightedSeriesName) {
+      return {
+        ...highlightableSeries,
+        emphasis: { ...emphasis, focus: 'none' },
+      } as SeriesOption;
+    }
+
+    const areaStyle = scaleStyleOpacity(highlightableSeries.areaStyle, false);
+    const emphasisAreaStyle = scaleStyleOpacity(emphasis.areaStyle, false);
+    return {
+      ...highlightableSeries,
+      ...(areaStyle && { areaStyle }),
+      itemStyle: scaleStyleOpacity(highlightableSeries.itemStyle),
+      lineStyle: scaleStyleOpacity(highlightableSeries.lineStyle),
       emphasis: {
-        ...seriesOption.emphasis,
-        focus: 'series',
+        ...emphasis,
+        ...(emphasisAreaStyle && { areaStyle: emphasisAreaStyle }),
+        focus: 'none',
+        itemStyle: scaleStyleOpacity(emphasis.itemStyle),
+        lineStyle: scaleStyleOpacity(emphasis.lineStyle),
       },
     } as SeriesOption;
   });

@@ -19,15 +19,15 @@
 import { styled } from '@apache-superset/core/theme';
 import { t } from '@apache-superset/core/translation';
 
-const ControlsRow = styled.div`
-  ${({ theme }) => `
+const ControlsRow = styled.div<{ overlay?: boolean }>`
+  ${({ overlay, theme }) => `
     align-items: center;
     background: ${theme.colorBgContainer};
     display: flex;
     gap: ${theme.sizeUnit}px;
     justify-content: flex-end;
     padding-bottom: ${theme.sizeUnit}px;
-    position: sticky;
+    position: ${overlay ? 'static' : 'sticky'};
     top: 0;
     z-index: 1;
   `}
@@ -74,6 +74,7 @@ export type ChartLegendControlsProps = {
   onInverse: () => void;
   onOtherSeriesOpacityChange?: (opacity: number) => void;
   otherSeriesOpacity?: number;
+  overlay?: boolean;
   showHighlight?: boolean;
   showSelectors: boolean;
 };
@@ -85,6 +86,7 @@ export default function ChartLegendControls({
   onInverse,
   onOtherSeriesOpacityChange,
   otherSeriesOpacity = 0.2,
+  overlay,
   showHighlight = false,
   showSelectors,
 }: ChartLegendControlsProps) {
@@ -95,7 +97,7 @@ export default function ChartLegendControls({
 
   return (
     <>
-      <ControlsRow>
+      <ControlsRow overlay={overlay}>
         {showSelectors && (
           <>
             <ControlButton type="button" onClick={onAll}>
