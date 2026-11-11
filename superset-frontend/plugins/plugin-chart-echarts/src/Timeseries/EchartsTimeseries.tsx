@@ -148,6 +148,10 @@ export default function EchartsTimeseries({
   const { stack } = formData;
   const theme = useTheme();
   const echartRef = useRef<EchartsHandler | null>(null);
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [highlightedSeriesName, setHighlightedSeriesName] = useState<
+    string | null
+  >(null);
   // eslint-disable-next-line no-param-reassign
   refs.echartRef = echartRef;
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -847,6 +851,39 @@ export default function EchartsTimeseries({
     [],
   );
 
+  const toggleHighlightMode = useCallback(() => {
+    if (highlightMode) {
+      setHighlightMode(false);
+      setHighlightedSeriesName(null);
+      dispatchLegendAction({ type: 'downplay' });
+      return;
+    }
+    setHighlightMode(true);
+  }, [dispatchLegendAction, highlightMode]);
+
+  const selectHighlightedSeries = useCallback(
+    (name: string) => {
+      const nextName = highlightedSeriesName === name ? null : name;
+      setHighlightedSeriesName(nextName);
+      dispatchLegendAction({ type: 'downplay' });
+      if (nextName) {
+        dispatchLegendAction({ seriesName: nextName, type: 'highlight' });
+      }
+    },
+    [dispatchLegendAction, highlightedSeriesName],
+  );
+
+  useEffect(() => {
+    if (!highlightMode || !highlightedSeriesName) {
+      return;
+    }
+    dispatchLegendAction({ type: 'downplay' });
+    dispatchLegendAction({
+      seriesName: highlightedSeriesName,
+      type: 'highlight',
+    });
+  }, [dispatchLegendAction, highlightedSeriesName, highlightMode]);
+
   const chartBodyHeight = Math.max(height - extraControlHeight, 0);
   const isVerticalLegend =
     customLegend?.orientation === LegendOrientation.Left ||
@@ -867,15 +904,26 @@ export default function EchartsTimeseries({
       ? customLegendMaxWidth !== undefined && customLegendMaxWidth > 0
       : chartBodyHeight > TIMESERIES_CONSTANTS.compactChartHeight &&
         customLegendMaxHeight > 0);
-  const chartEchartOptions = useMemo(
-    () =>
-      getViableTimeseriesEchartOptions(
-        echartOptions,
-        chartBodyHeight,
-        formData.zoomable,
-      ),
-    [chartBodyHeight, echartOptions, formData.zoomable],
-  );
+  const chartEchartOptions = useMemo(() => {
+    const options = getViableTimeseriesEchartOptions(
+      echartOptions,
+      chartBodyHeight,
+      formData.zoomable,
+    );
+    if (!highlightMode || !Array.isArray(options.series)) {
+      return options;
+    }
+    return {
+      ...options,
+      series: options.series.map(seriesOption => ({
+        ...seriesOption,
+        emphasis: {
+          ...seriesOption.emphasis,
+          focus: 'series',
+        },
+      })),
+    };
+  }, [chartBodyHeight, echartOptions, formData.zoomable, highlightMode]);
   const renderEchart = ({
     chartHeight,
     chartWidth,
@@ -910,18 +958,16 @@ export default function EchartsTimeseries({
           renderLegend={() => (
             <TimeseriesLegend
               {...customLegend}
+              highlightedSeriesName={highlightedSeriesName}
+              highlightMode={highlightMode}
               maxHeight={customLegendMaxHeight}
               maxWidth={customLegendMaxWidth}
               onAll={() => dispatchLegendAction({ type: 'legendAllSelect' })}
-              onHover={name =>
-                dispatchLegendAction({
-                  seriesName: name ?? undefined,
-                  type: name === null ? 'downplay' : 'highlight',
-                })
-              }
+              onHighlightToggle={toggleHighlightMode}
               onInverse={() =>
                 dispatchLegendAction({ type: 'legendInverseSelect' })
               }
+              onSelectHighlight={selectHighlightedSeries}
               onToggle={name =>
                 dispatchLegendAction({ name, type: 'legendToggleSelect' })
               }

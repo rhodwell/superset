@@ -100,24 +100,31 @@ const RowBreak = styled.li`
 `;
 
 export type TimeseriesLegendProps = TimeseriesCustomLegend & {
+  highlightedSeriesName: string | null;
+  highlightMode: boolean;
   maxHeight: number;
   // Bounds vertical (Left/Right) legends, whose labels truncate to fit.
   maxWidth?: number;
   onAll: () => void;
-  onHover?: (name: string | null) => void;
+  onHighlightToggle: () => void;
   onInverse: () => void;
+  onSelectHighlight: (name: string) => void;
   onToggle: (name: string) => void;
 };
 
 function TimeseriesLegend({
+  highlightedSeriesName,
+  highlightMode,
   items,
   maxHeight,
   maxWidth,
   onAll,
-  onHover,
+  onHighlightToggle,
   onInverse,
+  onSelectHighlight,
   onToggle,
   orientation,
+  showHighlight,
   showSelectors,
 }: TimeseriesLegendProps) {
   const isVertical =
@@ -137,8 +144,11 @@ function TimeseriesLegend({
       maxWidth={isVertical ? maxWidth : undefined}
     >
       <ChartLegendControls
+        highlightMode={highlightMode}
         onAll={onAll}
+        onHighlightToggle={onHighlightToggle}
         onInverse={onInverse}
+        showHighlight={showHighlight}
         showSelectors={showSelectors}
       />
       <ItemList isVertical={isVertical} underSelectors={showSelectors}>
@@ -152,17 +162,27 @@ function TimeseriesLegend({
           ) : (
             <LegendItem key={item.name}>
               <ItemButton
-                aria-pressed={item.selected}
+                aria-pressed={
+                  highlightMode
+                    ? highlightedSeriesName === item.name
+                    : item.selected
+                }
                 disabled={!item.interactive}
-                selected={item.selected}
+                selected={
+                  highlightMode
+                    ? highlightedSeriesName === item.name
+                    : item.selected
+                }
                 type="button"
                 onClick={() => {
                   if (item.interactive) {
-                    onToggle(item.name);
+                    if (highlightMode) {
+                      onSelectHighlight(item.name);
+                    } else {
+                      onToggle(item.name);
+                    }
                   }
                 }}
-                onMouseEnter={() => onHover?.(item.name)}
-                onMouseLeave={() => onHover?.(null)}
               >
                 <TimeseriesLegendIcon
                   color={item.color}

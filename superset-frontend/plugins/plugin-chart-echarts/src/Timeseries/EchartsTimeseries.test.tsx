@@ -1648,11 +1648,15 @@ test('hides a vertical custom legend when the width cap rounds down to zero', as
 test('renders legend selectors and calls their handlers', async () => {
   const user = userEvent.setup();
   const onAll = jest.fn();
+  const onHighlightToggle = jest.fn();
   const onInverse = jest.fn();
+  const onToggle = jest.fn();
 
   render(
     <TimeseriesLegend
       grid={{ bottom: 0, top: 0 }}
+      highlightedSeriesName={null}
+      highlightMode={false}
       items={[
         {
           color: '#123456',
@@ -1664,16 +1668,60 @@ test('renders legend selectors and calls their handlers', async () => {
       ]}
       maxHeight={100}
       onAll={onAll}
+      onHighlightToggle={onHighlightToggle}
       onInverse={onInverse}
-      onToggle={jest.fn()}
+      onSelectHighlight={jest.fn()}
+      onToggle={onToggle}
       orientation={LegendOrientation.Top}
+      showHighlight
       showSelectors
     />,
   );
 
   await user.click(screen.getByRole('button', { name: 'All' }));
   await user.click(screen.getByRole('button', { name: 'Inverse' }));
+  await user.click(screen.getByRole('button', { name: 'Highlight' }));
+  await user.click(screen.getByRole('button', { name: 'Alpha' }));
 
   expect(onAll).toHaveBeenCalledTimes(1);
   expect(onInverse).toHaveBeenCalledTimes(1);
+  expect(onHighlightToggle).toHaveBeenCalledTimes(1);
+  expect(onToggle).toHaveBeenCalledWith('Alpha');
+});
+
+test('selects a series for highlighting instead of toggling its visibility in Highlight Mode', async () => {
+  const user = userEvent.setup();
+  const onSelectHighlight = jest.fn();
+  const onToggle = jest.fn();
+
+  render(
+    <TimeseriesLegend
+      grid={{ bottom: 0, top: 0 }}
+      highlightedSeriesName={null}
+      highlightMode
+      items={[
+        {
+          color: '#123456',
+          icon: { shape: 'box', opacity: 1 },
+          interactive: true,
+          name: 'Alpha',
+          selected: true,
+        },
+      ]}
+      maxHeight={100}
+      onAll={jest.fn()}
+      onHighlightToggle={jest.fn()}
+      onInverse={jest.fn()}
+      onSelectHighlight={onSelectHighlight}
+      onToggle={onToggle}
+      orientation={LegendOrientation.Top}
+      showHighlight
+      showSelectors
+    />,
+  );
+
+  await user.click(screen.getByRole('button', { name: 'Alpha' }));
+
+  expect(onSelectHighlight).toHaveBeenCalledWith('Alpha');
+  expect(onToggle).not.toHaveBeenCalled();
 });

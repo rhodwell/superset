@@ -50,14 +50,20 @@ const ControlButton = styled.button`
 `;
 
 export type ChartLegendControlsProps = {
+  highlightMode?: boolean;
   onAll: () => void;
+  onHighlightToggle?: () => void;
   onInverse: () => void;
+  showHighlight?: boolean;
   showSelectors: boolean;
 };
 
 export default function ChartLegendControls({
+  highlightMode = false,
   onAll,
+  onHighlightToggle,
   onInverse,
+  showHighlight = false,
   showSelectors,
 }: ChartLegendControlsProps) {
   if (!showSelectors) {
@@ -72,6 +78,11 @@ export default function ChartLegendControls({
       <ControlButton type="button" onClick={onInverse}>
         {t('Inverse')}
       </ControlButton>
+      {showHighlight && onHighlightToggle && (
+        <ControlButton type="button" onClick={onHighlightToggle}>
+          {highlightMode ? t('Highlighting') : t('Highlight')}
+        </ControlButton>
+      )}
     </ControlsRow>
   );
 }

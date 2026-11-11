@@ -168,6 +168,7 @@ export type TimeseriesCustomLegend = {
   };
   items: TimeseriesLegendItem[];
   orientation: LegendOrientation;
+  showHighlight: boolean;
   showSelectors: boolean;
 };
 
