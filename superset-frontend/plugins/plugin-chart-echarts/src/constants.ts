@@ -21,6 +21,7 @@ import { t } from '@apache-superset/core/translation';
 import { JsonValue, TimeGranularity } from '@superset-ui/core';
 import { ReactNode } from 'react';
 import {
+  HighlightFormData,
   LegendFormData,
   LegendOrientation,
   LegendType,
@@ -142,6 +143,12 @@ export const DEFAULT_LEGEND_FORM_DATA: LegendFormData = {
   showLegend: true,
   legendSort: null,
   showSelectorLegend: true,
+};
+
+export const DEFAULT_HIGHLIGHT_FORM_DATA: HighlightFormData = {
+  showHighlightLegend: false,
+  highlightOpacity: 1,
+  highlightDeselectedSeries: [],
 };
 
 export const DEFAULT_TITLE_FORM_DATA: TitleFormData = {
