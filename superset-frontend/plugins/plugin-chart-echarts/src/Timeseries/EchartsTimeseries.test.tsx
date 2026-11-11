@@ -18,6 +18,8 @@
  */
 import {
   render,
+  screen,
+  userEvent,
   waitFor,
   cleanup,
 } from '../../../../spec/helpers/testing-library';
@@ -39,6 +41,7 @@ import {
   type EchartsProps,
 } from '../types';
 import EchartsTimeseries from './EchartsTimeseries';
+import TimeseriesLegend from './TimeseriesLegend';
 import {
   BarValueLabelPosition,
   EchartsTimeseriesSeriesType,
@@ -1640,4 +1643,37 @@ test('hides a vertical custom legend when the width cap rounds down to zero', as
   await waitFor(() => {
     expect(queryByTestId('timeseries-custom-legend')).not.toBeInTheDocument();
   });
+});
+
+test('renders legend selectors and calls their handlers', async () => {
+  const user = userEvent.setup();
+  const onAll = jest.fn();
+  const onInverse = jest.fn();
+
+  render(
+    <TimeseriesLegend
+      grid={{ bottom: 0, top: 0 }}
+      items={[
+        {
+          color: '#123456',
+          icon: { shape: 'box', opacity: 1 },
+          interactive: true,
+          name: 'Alpha',
+          selected: true,
+        },
+      ]}
+      maxHeight={100}
+      onAll={onAll}
+      onInverse={onInverse}
+      onToggle={jest.fn()}
+      orientation={LegendOrientation.Top}
+      showSelectors
+    />,
+  );
+
+  await user.click(screen.getByRole('button', { name: 'All' }));
+  await user.click(screen.getByRole('button', { name: 'Inverse' }));
+
+  expect(onAll).toHaveBeenCalledTimes(1);
+  expect(onInverse).toHaveBeenCalledTimes(1);
 });

@@ -69,6 +69,33 @@ const SelectorButton = styled.button`
   `}
 `;
 
+type TimeseriesLegendControlProps = {
+  onAll: () => void;
+  onInverse: () => void;
+  showSelectors: boolean;
+};
+
+export function TimeseriesLegendControls({
+  onAll,
+  onInverse,
+  showSelectors,
+}: TimeseriesLegendControlProps) {
+  if (!showSelectors) {
+    return null;
+  }
+
+  return (
+    <SelectorRow>
+      <SelectorButton type="button" onClick={onAll}>
+        {t('All')}
+      </SelectorButton>
+      <SelectorButton type="button" onClick={onInverse}>
+        {t('Inverse')}
+      </SelectorButton>
+    </SelectorRow>
+  );
+}
+
 const ItemList = styled.ul<{ isVertical?: boolean; underSelectors: boolean }>`
   ${({ isVertical, theme, underSelectors }) => `
     align-items: flex-start;
@@ -166,16 +193,11 @@ function TimeseriesLegend({
       maxHeight={maxHeight}
       maxWidth={isVertical ? maxWidth : undefined}
     >
-      {showSelectors && (
-        <SelectorRow>
-          <SelectorButton type="button" onClick={onAll}>
-            {t('All')}
-          </SelectorButton>
-          <SelectorButton type="button" onClick={onInverse}>
-            {t('Inverse')}
-          </SelectorButton>
-        </SelectorRow>
-      )}
+      <TimeseriesLegendControls
+        onAll={onAll}
+        onInverse={onInverse}
+        showSelectors={showSelectors}
+      />
       <ItemList isVertical={isVertical} underSelectors={showSelectors}>
         {items.map((item, index) =>
           // ECharts treats these exact values as row-break sentinels, which
