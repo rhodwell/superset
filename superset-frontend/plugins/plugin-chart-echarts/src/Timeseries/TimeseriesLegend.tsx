@@ -108,6 +108,8 @@ export type TimeseriesLegendProps = TimeseriesCustomLegend & {
   onAll: () => void;
   onHighlightToggle: () => void;
   onInverse: () => void;
+  onOtherSeriesOpacityChange: (opacity: number) => void;
+  otherSeriesOpacity: number;
   onSelectHighlight: (name: string) => void;
   onToggle: (name: string) => void;
 };
@@ -121,6 +123,8 @@ function TimeseriesLegend({
   onAll,
   onHighlightToggle,
   onInverse,
+  onOtherSeriesOpacityChange,
+  otherSeriesOpacity,
   onSelectHighlight,
   onToggle,
   orientation,
@@ -148,6 +152,8 @@ function TimeseriesLegend({
         onAll={onAll}
         onHighlightToggle={onHighlightToggle}
         onInverse={onInverse}
+        onOtherSeriesOpacityChange={onOtherSeriesOpacityChange}
+        otherSeriesOpacity={otherSeriesOpacity}
         showHighlight={showHighlight}
         showSelectors={showSelectors}
       />

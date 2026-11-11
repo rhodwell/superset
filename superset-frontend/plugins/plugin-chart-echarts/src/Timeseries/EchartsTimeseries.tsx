@@ -55,7 +55,7 @@ import {
   TimeseriesChartTransformedProps,
   TimeseriesCustomLegend,
 } from './types';
-import { formatSeriesName } from '../utils/series';
+import { applyHighlightOpacity, formatSeriesName } from '../utils/series';
 import { getTemporalXAxisDrillByFilter } from '../utils/xAxisDrillByFilter';
 import { useLegendEventHandlers } from '../utils/legendEventHandlers';
 import { ExtraControls } from '../components/ExtraControls';
@@ -152,6 +152,7 @@ export default function EchartsTimeseries({
   const [highlightedSeriesName, setHighlightedSeriesName] = useState<
     string | null
   >(null);
+  const [otherSeriesOpacity, setOtherSeriesOpacity] = useState(0.2);
   // eslint-disable-next-line no-param-reassign
   refs.echartRef = echartRef;
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -915,15 +916,15 @@ export default function EchartsTimeseries({
     }
     return {
       ...options,
-      series: options.series.map(seriesOption => ({
-        ...seriesOption,
-        emphasis: {
-          ...seriesOption.emphasis,
-          focus: 'series',
-        },
-      })),
+      series: applyHighlightOpacity(options.series, otherSeriesOpacity),
     };
-  }, [chartBodyHeight, echartOptions, formData.zoomable, highlightMode]);
+  }, [
+    chartBodyHeight,
+    echartOptions,
+    formData.zoomable,
+    highlightMode,
+    otherSeriesOpacity,
+  ]);
   const renderEchart = ({
     chartHeight,
     chartWidth,
@@ -967,7 +968,9 @@ export default function EchartsTimeseries({
               onInverse={() =>
                 dispatchLegendAction({ type: 'legendInverseSelect' })
               }
+              onOtherSeriesOpacityChange={setOtherSeriesOpacity}
               onSelectHighlight={selectHighlightedSeries}
+              otherSeriesOpacity={otherSeriesOpacity}
               onToggle={name =>
                 dispatchLegendAction({ name, type: 'legendToggleSelect' })
               }

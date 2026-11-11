@@ -49,11 +49,31 @@ const ControlButton = styled.button`
   `}
 `;
 
+const OpacityControl = styled.label`
+  ${({ theme }) => `
+    align-items: center;
+    color: ${theme.colorTextSecondary};
+    display: flex;
+    gap: ${theme.sizeUnit}px;
+    justify-content: flex-end;
+    padding-bottom: ${theme.sizeUnit}px;
+    white-space: nowrap;
+
+    input {
+      accent-color: ${theme.colorPrimary};
+      cursor: pointer;
+      width: 90px;
+    }
+  `}
+`;
+
 export type ChartLegendControlsProps = {
   highlightMode?: boolean;
   onAll: () => void;
   onHighlightToggle?: () => void;
   onInverse: () => void;
+  onOtherSeriesOpacityChange?: (opacity: number) => void;
+  otherSeriesOpacity?: number;
   showHighlight?: boolean;
   showSelectors: boolean;
 };
@@ -63,26 +83,52 @@ export default function ChartLegendControls({
   onAll,
   onHighlightToggle,
   onInverse,
+  onOtherSeriesOpacityChange,
+  otherSeriesOpacity = 0.2,
   showHighlight = false,
   showSelectors,
 }: ChartLegendControlsProps) {
-  if (!showSelectors) {
+  const canShowHighlight = showHighlight && onHighlightToggle;
+  if (!showSelectors && !canShowHighlight) {
     return null;
   }
 
   return (
-    <ControlsRow>
-      <ControlButton type="button" onClick={onAll}>
-        {t('All')}
-      </ControlButton>
-      <ControlButton type="button" onClick={onInverse}>
-        {t('Inverse')}
-      </ControlButton>
-      {showHighlight && onHighlightToggle && (
-        <ControlButton type="button" onClick={onHighlightToggle}>
-          {highlightMode ? t('Highlighting') : t('Highlight')}
-        </ControlButton>
+    <>
+      <ControlsRow>
+        {showSelectors && (
+          <>
+            <ControlButton type="button" onClick={onAll}>
+              {t('All')}
+            </ControlButton>
+            <ControlButton type="button" onClick={onInverse}>
+              {t('Inverse')}
+            </ControlButton>
+          </>
+        )}
+        {canShowHighlight && (
+          <ControlButton type="button" onClick={() => onHighlightToggle?.()}>
+            {highlightMode ? t('Highlighting') : t('Highlight')}
+          </ControlButton>
+        )}
+      </ControlsRow>
+      {canShowHighlight && highlightMode && onOtherSeriesOpacityChange && (
+        <OpacityControl>
+          {t('Other series opacity')}
+          <input
+            aria-label={t('Other series opacity')}
+            max="1"
+            min="0"
+            step="0.05"
+            type="range"
+            value={otherSeriesOpacity}
+            onChange={event =>
+              onOtherSeriesOpacityChange(Number(event.currentTarget.value))
+            }
+          />
+          <span>{Math.round(otherSeriesOpacity * 100)}%</span>
+        </OpacityControl>
       )}
-    </ControlsRow>
+    </>
   );
 }

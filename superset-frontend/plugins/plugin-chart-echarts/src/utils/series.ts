@@ -916,6 +916,28 @@ export function formatSeriesName(
   return name;
 }
 
+export function applyHighlightOpacity(
+  series: SeriesOption[],
+  opacity: number,
+): SeriesOption[] {
+  return series.map(seriesOption => {
+    const blur = seriesOption.blur ?? {};
+    return {
+      ...seriesOption,
+      blur: {
+        ...blur,
+        areaStyle: { ...blur.areaStyle, opacity },
+        itemStyle: { ...blur.itemStyle, opacity },
+        lineStyle: { ...blur.lineStyle, opacity },
+      },
+      emphasis: {
+        ...seriesOption.emphasis,
+        focus: 'series',
+      },
+    } as SeriesOption;
+  });
+}
+
 export const getColtypesMapping = ({
   coltypes = [],
   colnames = [],

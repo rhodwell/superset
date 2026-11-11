@@ -17,6 +17,7 @@
  * under the License.
  */
 import {
+  fireEvent,
   render,
   screen,
   userEvent,
@@ -32,6 +33,7 @@ import {
 import { GenericDataType } from '@apache-superset/core/common';
 import { logging } from '@apache-superset/core/utils';
 import type { EChartsCoreOption } from 'echarts/core';
+import type { SeriesOption } from 'echarts';
 import type { ECElementEvent } from 'echarts/types/src/util/types';
 import type { ReactNode } from 'react';
 import {
@@ -42,6 +44,7 @@ import {
 } from '../types';
 import EchartsTimeseries from './EchartsTimeseries';
 import TimeseriesLegend from './TimeseriesLegend';
+import { applyHighlightOpacity } from '../utils/series';
 import {
   BarValueLabelPosition,
   EchartsTimeseriesSeriesType,
@@ -1586,6 +1589,7 @@ const makeVerticalLegend = (orientation: LegendOrientation) =>
       },
     ],
     orientation,
+    showHighlight: true,
     showSelectors: true,
   }) as never;
 
@@ -1670,8 +1674,10 @@ test('renders legend selectors and calls their handlers', async () => {
       onAll={onAll}
       onHighlightToggle={onHighlightToggle}
       onInverse={onInverse}
+      onOtherSeriesOpacityChange={jest.fn()}
       onSelectHighlight={jest.fn()}
       onToggle={onToggle}
+      otherSeriesOpacity={0.2}
       orientation={LegendOrientation.Top}
       showHighlight
       showSelectors
@@ -1712,8 +1718,10 @@ test('selects a series for highlighting instead of toggling its visibility in Hi
       onAll={jest.fn()}
       onHighlightToggle={jest.fn()}
       onInverse={jest.fn()}
+      onOtherSeriesOpacityChange={jest.fn()}
       onSelectHighlight={onSelectHighlight}
       onToggle={onToggle}
+      otherSeriesOpacity={0.2}
       orientation={LegendOrientation.Top}
       showHighlight
       showSelectors
@@ -1724,4 +1732,67 @@ test('selects a series for highlighting instead of toggling its visibility in Hi
 
   expect(onSelectHighlight).toHaveBeenCalledWith('Alpha');
   expect(onToggle).not.toHaveBeenCalled();
+});
+
+test('reports opacity slider changes in Highlight Mode', () => {
+  const onOtherSeriesOpacityChange = jest.fn();
+  const { getByLabelText } = render(
+    <TimeseriesLegend
+      grid={{ bottom: 0, top: 0 }}
+      highlightedSeriesName={null}
+      highlightMode
+      items={[
+        {
+          color: '#123456',
+          icon: { shape: 'box', opacity: 1 },
+          interactive: true,
+          name: 'Alpha',
+          selected: true,
+        },
+      ]}
+      maxHeight={100}
+      onAll={jest.fn()}
+      onHighlightToggle={jest.fn()}
+      onInverse={jest.fn()}
+      onOtherSeriesOpacityChange={onOtherSeriesOpacityChange}
+      onSelectHighlight={jest.fn()}
+      onToggle={jest.fn()}
+      otherSeriesOpacity={0.2}
+      orientation={LegendOrientation.Top}
+      showHighlight
+      showSelectors
+    />,
+  );
+
+  fireEvent.change(getByLabelText('Other series opacity'), {
+    target: { value: '0.6' },
+  });
+
+  expect(onOtherSeriesOpacityChange).toHaveBeenCalledWith(0.6);
+});
+
+test('applies opacity to blurred series while preserving existing styles', () => {
+  const series: SeriesOption[] = [
+    {
+      name: 'Alpha',
+      type: 'line',
+      blur: { lineStyle: { width: 2 } },
+      emphasis: { itemStyle: { color: 'red' } },
+    },
+  ];
+
+  expect(applyHighlightOpacity(series, 0.6)).toEqual([
+    expect.objectContaining({
+      name: 'Alpha',
+      blur: {
+        areaStyle: { opacity: 0.6 },
+        itemStyle: { opacity: 0.6 },
+        lineStyle: { opacity: 0.6, width: 2 },
+      },
+      emphasis: {
+        focus: 'series',
+        itemStyle: { color: 'red' },
+      },
+    }),
+  ]);
 });
