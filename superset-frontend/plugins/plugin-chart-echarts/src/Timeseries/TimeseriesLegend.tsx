@@ -18,8 +18,8 @@
  */
 import { memo } from 'react';
 import { styled } from '@apache-superset/core/theme';
-import { t } from '@apache-superset/core/translation';
 import { LegendOrientation } from '../types';
+import ChartLegendControls from '../components/ChartLegendControls';
 import TimeseriesLegendIcon, {
   LEGEND_ICON_OVERFLOW_PX,
 } from './TimeseriesLegendIcon';
@@ -38,63 +38,6 @@ const LegendViewport = styled.div<{ maxHeight: number; maxWidth?: number }>`
     width: ${maxWidth !== undefined && maxWidth > 0 ? 'auto' : '100%'};
   `}
 `;
-
-const SelectorRow = styled.div`
-  ${({ theme }) => `
-    align-items: center;
-    background: ${theme.colorBgContainer};
-    display: flex;
-    gap: ${theme.sizeUnit}px;
-    justify-content: flex-end;
-    padding-bottom: ${theme.sizeUnit}px;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  `}
-`;
-
-const SelectorButton = styled.button`
-  ${({ theme }) => `
-    background: transparent;
-    border: 1px solid ${theme.colorBorder};
-    border-radius: ${theme.borderRadius}px;
-    color: ${theme.colorText};
-    cursor: pointer;
-    font: inherit;
-    padding: 0 ${theme.sizeUnit}px;
-
-    &:hover {
-      color: ${theme.colorPrimary};
-    }
-  `}
-`;
-
-type TimeseriesLegendControlProps = {
-  onAll: () => void;
-  onInverse: () => void;
-  showSelectors: boolean;
-};
-
-export function TimeseriesLegendControls({
-  onAll,
-  onInverse,
-  showSelectors,
-}: TimeseriesLegendControlProps) {
-  if (!showSelectors) {
-    return null;
-  }
-
-  return (
-    <SelectorRow>
-      <SelectorButton type="button" onClick={onAll}>
-        {t('All')}
-      </SelectorButton>
-      <SelectorButton type="button" onClick={onInverse}>
-        {t('Inverse')}
-      </SelectorButton>
-    </SelectorRow>
-  );
-}
 
 const ItemList = styled.ul<{ isVertical?: boolean; underSelectors: boolean }>`
   ${({ isVertical, theme, underSelectors }) => `
@@ -193,7 +136,7 @@ function TimeseriesLegend({
       maxHeight={maxHeight}
       maxWidth={isVertical ? maxWidth : undefined}
     >
-      <TimeseriesLegendControls
+      <ChartLegendControls
         onAll={onAll}
         onInverse={onInverse}
         showSelectors={showSelectors}
