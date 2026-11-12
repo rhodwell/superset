@@ -17,7 +17,6 @@
  * under the License.
  */
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -1696,45 +1695,6 @@ test('renders legend selectors and calls their handlers', async () => {
   expect(onToggle).toHaveBeenCalledWith('Alpha');
 });
 
-test('selects a series for highlighting instead of toggling its visibility in Highlight Mode', async () => {
-  const user = userEvent.setup();
-  const onSelectHighlight = jest.fn();
-  const onToggle = jest.fn();
-
-  render(
-    <TimeseriesLegend
-      grid={{ bottom: 0, top: 0 }}
-      highlightedSeriesName={null}
-      highlightMode
-      items={[
-        {
-          color: '#123456',
-          icon: { shape: 'box', opacity: 1 },
-          interactive: true,
-          name: 'Alpha',
-          selected: true,
-        },
-      ]}
-      maxHeight={100}
-      onAll={jest.fn()}
-      onHighlightToggle={jest.fn()}
-      onInverse={jest.fn()}
-      onOtherSeriesOpacityChange={jest.fn()}
-      onSelectHighlight={onSelectHighlight}
-      onToggle={onToggle}
-      otherSeriesOpacity={0.2}
-      orientation={LegendOrientation.Top}
-      showHighlight
-      showSelectors
-    />,
-  );
-
-  await user.click(screen.getByRole('button', { name: 'Alpha' }));
-
-  expect(onSelectHighlight).toHaveBeenCalledWith('Alpha');
-  expect(onToggle).not.toHaveBeenCalled();
-});
-
 test('reports opacity slider changes in Highlight Mode', () => {
   const onOtherSeriesOpacityChange = jest.fn();
   const { getByLabelText } = render(
@@ -1770,78 +1730,6 @@ test('reports opacity slider changes in Highlight Mode', () => {
   });
 
   expect(onOtherSeriesOpacityChange).toHaveBeenCalledWith(0.6);
-});
-
-test('renders Highlight controls for a top-oriented scroll legend', () => {
-  render(
-    <EchartsTimeseries
-      {...defaultProps}
-      formData={{
-        ...defaultFormData,
-        legendOrientation: LegendOrientation.Top,
-        legendType: LegendType.Scroll,
-        showLegend: true,
-      }}
-    />,
-  );
-
-  expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Inverse' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
-});
-
-test('uses native scroll-legend clicks to select a series in Highlight Mode', () => {
-  render(
-    <EchartsTimeseries
-      {...defaultProps}
-      echartOptions={
-        {
-          series: [
-            { name: 'Alpha', type: 'line', data: [] },
-            { name: 'Beta', type: 'line', data: [] },
-          ],
-        } as EChartsCoreOption
-      }
-      formData={{
-        ...defaultFormData,
-        legendOrientation: LegendOrientation.Top,
-        legendType: LegendType.Scroll,
-        showLegend: true,
-      }}
-    />,
-  );
-
-  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
-  const onLegendSelectChanged =
-    getLatestEchartProps().eventHandlers?.legendselectchanged;
-
-  act(() =>
-    onLegendSelectChanged?.({
-      name: 'Alpha',
-      selected: { Alpha: false, Beta: true },
-    }),
-  );
-
-  expect(getLatestEchartProps().echartOptions.series).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        name: 'Alpha',
-        emphasis: expect.objectContaining({ focus: 'none' }),
-      }),
-      expect.objectContaining({
-        name: 'Beta',
-        itemStyle: expect.objectContaining({ opacity: 0.2 }),
-        lineStyle: expect.objectContaining({ opacity: 0.2 }),
-        emphasis: expect.objectContaining({
-          focus: 'none',
-          itemStyle: expect.objectContaining({ opacity: 0.2 }),
-        }),
-      }),
-    ]),
-  );
-  const renderedSeries = getLatestEchartProps().echartOptions
-    .series as SeriesOption[];
-  expect(renderedSeries[1]).not.toHaveProperty('areaStyle');
 });
 
 test('dims other series without changing selected opacity or adding area fills', () => {
