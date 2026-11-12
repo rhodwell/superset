@@ -169,6 +169,9 @@ export default function EchartsTimeseries({
     string | null
   >(null);
   const [otherSeriesOpacity, setOtherSeriesOpacity] = useState(0.2);
+  const [hoveredSeriesName, setHoveredSeriesName] = useState<string | null>(
+    null,
+  );
   // eslint-disable-next-line no-param-reassign
   refs.echartRef = echartRef;
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -672,9 +675,15 @@ export default function EchartsTimeseries({
     },
     mouseout: () => {
       onFocusedSeries(null);
+      if (!highlightMode) {
+        setHoveredSeriesName(null);
+      }
     },
     mouseover: params => {
       onFocusedSeries(params.seriesName);
+      if (!highlightMode && typeof params.seriesName === 'string') {
+        setHoveredSeriesName(params.seriesName);
+      }
     },
     contextmenu: async eventParams => {
       // Axis labels carry no series, so the dimension-based filters below
@@ -946,18 +955,20 @@ export default function EchartsTimeseries({
       chartBodyHeight,
       formData.zoomable,
     );
-    if (
-      !highlightMode ||
-      !highlightedSeriesName ||
-      !Array.isArray(options.series)
-    ) {
+    if (!highlightMode && !hoveredSeriesName) {
+      return options;
+    }
+    const seriesNameToApplyOpacity = highlightMode
+      ? highlightedSeriesName
+      : hoveredSeriesName;
+    if (!seriesNameToApplyOpacity || !Array.isArray(options.series)) {
       return options;
     }
     return {
       ...options,
       series: applyHighlightOpacity(
         options.series,
-        highlightedSeriesName,
+        seriesNameToApplyOpacity,
         otherSeriesOpacity,
       ),
     };
@@ -967,6 +978,7 @@ export default function EchartsTimeseries({
     formData.zoomable,
     highlightMode,
     highlightedSeriesName,
+    hoveredSeriesName,
     otherSeriesOpacity,
   ]);
   const renderEchart = ({
@@ -1009,6 +1021,7 @@ export default function EchartsTimeseries({
               maxWidth={customLegendMaxWidth}
               onAll={() => dispatchLegendAction({ type: 'legendAllSelect' })}
               onHighlightToggle={toggleHighlightMode}
+              onHover={highlightMode ? undefined : setHoveredSeriesName}
               onInverse={() =>
                 dispatchLegendAction({ type: 'legendInverseSelect' })
               }
