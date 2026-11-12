@@ -107,7 +107,6 @@ export type TimeseriesLegendProps = TimeseriesCustomLegend & {
   maxWidth?: number;
   onAll: () => void;
   onHighlightToggle: () => void;
-  onHover?: (name: string | null) => void;
   onInverse: () => void;
   onOtherSeriesOpacityChange: (opacity: number) => void;
   otherSeriesOpacity: number;
@@ -123,7 +122,6 @@ function TimeseriesLegend({
   maxWidth,
   onAll,
   onHighlightToggle,
-  onHover,
   onInverse,
   onOtherSeriesOpacityChange,
   otherSeriesOpacity,
@@ -191,8 +189,6 @@ function TimeseriesLegend({
                     }
                   }
                 }}
-                onMouseEnter={() => onHover?.(item.name)}
-                onMouseLeave={() => onHover?.(null)}
               >
                 <TimeseriesLegendIcon
                   color={item.color}
