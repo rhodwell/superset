@@ -100,7 +100,7 @@ const RowBreak = styled.li`
 `;
 
 export type TimeseriesLegendProps = TimeseriesCustomLegend & {
-  highlightedSeriesName: string | null;
+  highlightedSeriesNames: string[];
   highlightMode: boolean;
   maxHeight: number;
   // Bounds vertical (Left/Right) legends, whose labels truncate to fit.
@@ -115,7 +115,7 @@ export type TimeseriesLegendProps = TimeseriesCustomLegend & {
 };
 
 function TimeseriesLegend({
-  highlightedSeriesName,
+  highlightedSeriesNames,
   highlightMode,
   items,
   maxHeight,
@@ -170,13 +170,13 @@ function TimeseriesLegend({
               <ItemButton
                 aria-pressed={
                   highlightMode
-                    ? highlightedSeriesName === item.name
+                    ? highlightedSeriesNames.includes(String(item.name))
                     : item.selected
                 }
                 disabled={!item.interactive}
                 selected={
                   highlightMode
-                    ? highlightedSeriesName === item.name
+                    ? highlightedSeriesNames.includes(String(item.name))
                     : item.selected
                 }
                 type="button"

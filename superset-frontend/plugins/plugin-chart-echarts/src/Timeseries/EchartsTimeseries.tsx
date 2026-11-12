@@ -165,9 +165,9 @@ export default function EchartsTimeseries({
   const echartRef = useRef<EchartsHandler | null>(null);
   const restoringLegendSelectionRef = useRef(false);
   const [highlightMode, setHighlightMode] = useState(false);
-  const [highlightedSeriesName, setHighlightedSeriesName] = useState<
-    string | null
-  >(null);
+  const [highlightedSeriesNames, setHighlightedSeriesNames] = useState<
+    string[]
+  >([]);
   const [otherSeriesOpacity, setOtherSeriesOpacity] = useState(0.2);
   // eslint-disable-next-line no-param-reassign
   refs.echartRef = echartRef;
@@ -591,7 +591,11 @@ export default function EchartsTimeseries({
 
   const selectHighlightedSeries = useCallback(
     (name: string) => {
-      setHighlightedSeriesName(current => (current === name ? null : name));
+      setHighlightedSeriesNames(current =>
+        current.includes(name)
+          ? current.filter(n => n !== name)
+          : [...current, name],
+      );
       dispatchLegendAction({ type: 'downplay' });
     },
     [dispatchLegendAction],
@@ -904,7 +908,7 @@ export default function EchartsTimeseries({
   const toggleHighlightMode = useCallback(() => {
     if (highlightMode) {
       setHighlightMode(false);
-      setHighlightedSeriesName(null);
+      setHighlightedSeriesNames([]);
       dispatchLegendAction({ type: 'downplay' });
       return;
     }
@@ -948,7 +952,7 @@ export default function EchartsTimeseries({
     );
     if (
       !highlightMode ||
-      !highlightedSeriesName ||
+      highlightedSeriesNames.length === 0 ||
       !Array.isArray(options.series)
     ) {
       return options;
@@ -957,7 +961,7 @@ export default function EchartsTimeseries({
       ...options,
       series: applyHighlightOpacity(
         options.series,
-        highlightedSeriesName,
+        highlightedSeriesNames,
         otherSeriesOpacity,
       ),
     };
@@ -966,7 +970,7 @@ export default function EchartsTimeseries({
     echartOptions,
     formData.zoomable,
     highlightMode,
-    highlightedSeriesName,
+    highlightedSeriesNames,
     otherSeriesOpacity,
   ]);
   const renderEchart = ({
@@ -1003,7 +1007,7 @@ export default function EchartsTimeseries({
           renderLegend={() => (
             <TimeseriesLegend
               {...customLegend}
-              highlightedSeriesName={highlightedSeriesName}
+              highlightedSeriesNames={highlightedSeriesNames}
               highlightMode={highlightMode}
               maxHeight={customLegendMaxHeight}
               maxWidth={customLegendMaxWidth}

@@ -918,7 +918,7 @@ export function formatSeriesName(
 
 export function applyHighlightOpacity(
   series: SeriesOption[],
-  highlightedSeriesName: string,
+  highlightedSeriesNames: string[],
   opacity: number,
 ): SeriesOption[] {
   type OpacityStyle = object & { opacity?: number };
@@ -950,7 +950,7 @@ export function applyHighlightOpacity(
   return series.map(seriesOption => {
     const highlightableSeries = seriesOption as HighlightableSeries;
     const emphasis = highlightableSeries.emphasis ?? {};
-    if (String(highlightableSeries.name) === highlightedSeriesName) {
+    if (highlightedSeriesNames.includes(String(highlightableSeries.name))) {
       return {
         ...highlightableSeries,
         emphasis: { ...emphasis, focus: 'none' },
