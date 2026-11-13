@@ -67,6 +67,7 @@ import { useLegendEventHandlers } from '../utils/legendEventHandlers';
 import { ExtraControls } from '../components/ExtraControls';
 import TimeseriesLegend from './TimeseriesLegend';
 import { TIMESERIES_CONSTANTS, X_AXIS_CROSS_FILTER_SOURCE } from '../constants';
+import { useSeriesHighlight } from '../hooks/useSeriesHighlight';
 
 const TIMER_DURATION = 300;
 const MAX_CUSTOM_LEGEND_HEIGHT = 160;
@@ -163,12 +164,24 @@ export default function EchartsTimeseries({
   const { stack } = formData;
   const theme = useTheme();
   const echartRef = useRef<EchartsHandler | null>(null);
-  const restoringLegendSelectionRef = useRef(false);
-  const [highlightMode, setHighlightMode] = useState(false);
-  const [highlightedSeriesNames, setHighlightedSeriesNames] = useState<
-    string[]
-  >([]);
-  const [otherSeriesOpacity, setOtherSeriesOpacity] = useState(0.2);
+  const dispatchLegendAction = useCallback(
+    (action: { name?: string; seriesName?: string; type: string }) => {
+      echartRef.current?.getEchartInstance()?.dispatchAction(action);
+    },
+    [],
+  );
+  const {
+    highlightMode,
+    highlightedSeriesNames,
+    otherSeriesOpacity,
+    selectHighlightedSeries,
+    setOtherSeriesOpacity,
+    toggleHighlightMode,
+    getLegendSelectChangeHandler,
+  } = useSeriesHighlight({
+    echartRef,
+    dispatchLegendAction,
+  });
   // eslint-disable-next-line no-param-reassign
   refs.echartRef = echartRef;
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -582,56 +595,21 @@ export default function EchartsTimeseries({
     [xAxisValueIndex],
   );
 
-  const dispatchLegendAction = useCallback(
-    (action: { name?: string; seriesName?: string; type: string }) => {
-      echartRef.current?.getEchartInstance()?.dispatchAction(action);
-    },
-    [],
-  );
-
-  const selectHighlightedSeries = useCallback(
-    (name: string) => {
-      setHighlightedSeriesNames(current =>
-        current.includes(name)
-          ? current.filter(n => n !== name)
-          : [...current, name],
-      );
-      dispatchLegendAction({ type: 'downplay' });
-    },
-    [dispatchLegendAction],
-  );
-
   const legendEventHandlers = useLegendEventHandlers(
     onLegendStateChanged,
     onLegendScroll,
   );
 
+  const handleLegendSelectChange = getLegendSelectChangeHandler();
+
   const eventHandlers: EventHandlers = {
     ...legendEventHandlers,
     legendselectchanged: params => {
-      if (restoringLegendSelectionRef.current) {
-        return;
-      }
       if (!highlightMode || typeof params.name !== 'string') {
         legendEventHandlers.legendselectchanged(params);
         return;
       }
-
-      const { name, selected } = params;
-      const chart = echartRef.current?.getEchartInstance();
-      const selection = selected?.[name];
-      if (chart && typeof selection === 'boolean') {
-        restoringLegendSelectionRef.current = true;
-        try {
-          chart.dispatchAction({
-            name,
-            type: selection ? 'legendUnSelect' : 'legendSelect',
-          });
-        } finally {
-          restoringLegendSelectionRef.current = false;
-        }
-      }
-      selectHighlightedSeries(name);
+      handleLegendSelectChange(params);
     },
     click: props => {
       // Allow cross-filter by dimensions OR by categorical X-axis (issue #25334)
@@ -904,16 +882,6 @@ export default function EchartsTimeseries({
       }
     },
   };
-
-  const toggleHighlightMode = useCallback(() => {
-    if (highlightMode) {
-      setHighlightMode(false);
-      setHighlightedSeriesNames([]);
-      dispatchLegendAction({ type: 'downplay' });
-      return;
-    }
-    setHighlightMode(true);
-  }, [dispatchLegendAction, highlightMode]);
 
   const chartBodyHeight = Math.max(height - extraControlHeight, 0);
   const isVerticalLegend =
