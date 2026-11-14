@@ -104,6 +104,12 @@ export type LegendFormData = {
   showSelectorLegend: boolean;
 };
 
+export type HighlightFormData = {
+  showHighlightLegend?: boolean;
+  highlightOpacity?: number;
+  highlightDeselectedSeries?: string[];
+};
+
 export type EventHandlers = Record<string, { (props: any): void }>;
 
 export type QueryEventHandlers = {

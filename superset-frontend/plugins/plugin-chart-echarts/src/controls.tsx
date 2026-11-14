@@ -29,6 +29,7 @@ import {
   sharedControls,
 } from '@superset-ui/chart-controls';
 import {
+  DEFAULT_HIGHLIGHT_FORM_DATA,
   DEFAULT_LEGEND_FORM_DATA,
   StackControlOptions,
   StackControlOptionsWithoutStream,
@@ -44,6 +45,8 @@ const {
   showLegend,
   showSelectorLegend,
 } = DEFAULT_LEGEND_FORM_DATA;
+const { showHighlightLegend, highlightOpacity, highlightDeselectedSeries } =
+  DEFAULT_HIGHLIGHT_FORM_DATA;
 
 export const showLegendControl: ControlSetItem = {
   name: 'show_legend',
@@ -60,14 +63,59 @@ export const showSelectorLegendControl: ControlSetItem = {
   name: 'show_selector_legend',
   config: {
     type: 'CheckboxControl',
-    label: t('Show All/Invert buttons in legend'),
+    label: t('Show control buttons in legend'),
     renderTrigger: true,
     default: showSelectorLegend,
     description: t(
-      'Toggle to show/hide the "All/Invert" buttons in the legend.',
+      'Toggle to show/hide the All, Invert, and Highlight buttons in the legend.',
     ),
     visibility: ({ controls }: ControlPanelsContainerProps) =>
       Boolean(controls?.show_legend?.value),
+  },
+};
+
+const showHighlightLegendControl: ControlSetItem = {
+  name: 'show_highlight_legend',
+  config: {
+    type: 'CheckboxControl',
+    label: t('Show Highlight button in legend'),
+    renderTrigger: true,
+    default: showHighlightLegend,
+    description: t('Enable the Highlight button in the legend.'),
+    visibility: ({ controls }: ControlPanelsContainerProps) =>
+      Boolean(
+        controls?.show_legend?.value && controls?.show_selector_legend?.value,
+      ),
+    disableStash: true,
+    resetOnHide: false,
+  },
+};
+
+const highlightOpacityControl: ControlSetItem = {
+  name: 'highlight_opacity',
+  config: {
+    type: 'SliderControl',
+    label: t('Deselected series opacity'),
+    renderTrigger: true,
+    min: 0,
+    max: 1,
+    step: 0.1,
+    default: highlightOpacity,
+    description: t('Opacity of deselected series.'),
+  },
+};
+
+const deselectedSeriesControl: ControlSetItem = {
+  name: 'highlight_deselected_series',
+  config: {
+    type: 'SelectControl',
+    label: t('Deselected series'),
+    multi: true,
+    freeForm: true,
+    choices: [],
+    default: highlightDeselectedSeries,
+    renderTrigger: true,
+    description: t('Enter the legend names of series to fade.'),
   },
 };
 
@@ -149,6 +197,13 @@ export const legendSection: ControlSetRow[] = [
   [legendOrientationControl],
   [legendMarginControl],
   [legendSortControl],
+];
+
+export const highlightSection: ControlSetRow[] = [
+  [<ControlSubSectionHeader>{t('Highlight')}</ControlSubSectionHeader>],
+  [showHighlightLegendControl],
+  [deselectedSeriesControl],
+  [highlightOpacityControl],
 ];
 
 export const showValueControl: ControlSetItem = {
