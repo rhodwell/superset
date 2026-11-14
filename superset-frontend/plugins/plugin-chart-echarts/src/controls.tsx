@@ -37,6 +37,7 @@ import {
 import { DEFAULT_FORM_DATA } from './Timeseries/constants';
 import { BarValueLabelPosition } from './Timeseries/types';
 import { defaultXAxis } from './defaults';
+import { getHighlightSeriesNames } from './utils/highlightSeries';
 
 const {
   legendMargin,
@@ -111,11 +112,34 @@ const deselectedSeriesControl: ControlSetItem = {
     type: 'SelectControl',
     label: t('Deselected series'),
     multi: true,
-    freeForm: true,
+    freeForm: false,
     choices: [],
     default: highlightDeselectedSeries,
     renderTrigger: true,
-    description: t('Enter the legend names of series to fade.'),
+    description: t('Select the legend series to fade.'),
+    shouldMapStateToProps: () => true,
+    mapStateToProps: (explore, control, chart) => {
+      const names = getHighlightSeriesNames(explore, chart);
+      const selected = Array.isArray(control?.value)
+        ? control.value.filter(value => typeof value === 'string')
+        : [];
+      const available = new Set(names ?? []);
+      const choices: [string, string][] = (names ?? []).map(name => [
+        name,
+        name,
+      ]);
+      selected.forEach(name => {
+        if (!available.has(name)) {
+          choices.push([name, names ? t('%s (missing)', name) : name]);
+        }
+      });
+      return {
+        choices,
+        placeholder: names
+          ? t('Select series')
+          : t('Run the chart to load series'),
+      };
+    },
   },
 };
 
