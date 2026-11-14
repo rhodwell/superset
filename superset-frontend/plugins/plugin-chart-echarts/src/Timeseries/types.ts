@@ -32,6 +32,7 @@ import {
   BaseTransformedProps,
   ContextMenuTransformedProps,
   CrossFilterTransformedProps,
+  HighlightFormData,
   LabelPositionEnum,
   LegendFormData,
   LegendOrientation,
@@ -131,6 +132,7 @@ export type EchartsTimeseriesFormData = QueryFormData & {
   colorByPrimaryAxis?: boolean;
   orientation?: OrientationType;
 } & LegendFormData &
+  HighlightFormData &
   TitleFormData;
 
 export interface EchartsTimeseriesChartProps extends BaseChartProps<EchartsTimeseriesFormData> {
