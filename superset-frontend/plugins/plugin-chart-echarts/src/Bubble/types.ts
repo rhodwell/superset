@@ -21,9 +21,14 @@ import {
   ChartDataResponseResult,
   QueryFormData,
 } from '@superset-ui/core';
-import { LegendFormData, BaseTransformedProps } from '../types';
+import {
+  LegendFormData,
+  HighlightFormData,
+  BaseTransformedProps,
+} from '../types';
 
 export type EchartsBubbleFormData = QueryFormData &
+  HighlightFormData &
   LegendFormData & {
     series?: string;
     entity: string;

@@ -28,6 +28,7 @@ import {
 import { DEFAULT_FORM_DATA } from './constants';
 import {
   legendSection,
+  highlightSection,
   truncateXAxis,
   xAxisBounds,
   xAxisLabelRotation,
@@ -69,6 +70,7 @@ const config: ControlPanelConfig = {
       controlSetRows: [
         ['color_scheme'],
         ...legendSection,
+        ...highlightSection,
         [
           {
             name: 'max_bubble_size',
