@@ -41,6 +41,7 @@ import {
 } from '../../constants';
 import {
   legendSection,
+  highlightSection,
   minorTicks,
   axisTicks,
   gridlines,
@@ -487,6 +488,7 @@ const config: ControlPanelConfig = {
         [gridlines],
         [valueAxisLabels],
         ...legendSection,
+        ...highlightSection,
         [<ControlSubSectionHeader>{t('X Axis')}</ControlSubSectionHeader>],
         ...createAxisControl('x'),
         [truncateXAxis],
