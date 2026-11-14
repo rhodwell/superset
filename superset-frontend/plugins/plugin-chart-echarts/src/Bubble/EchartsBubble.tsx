@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useMemo } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import {
   ContextMenuFilters,
   DataRecordValue,
@@ -28,9 +28,14 @@ import {
 } from '@superset-ui/core';
 import { BubbleChartTransformedProps } from './types';
 import Echart from '../components/Echart';
-import { EventHandlers } from '../types';
+import {
+  EventHandlers,
+  EchartsHandler,
+  LegendOrientation,
+  LegendType,
+} from '../types';
 import { useLegendEventHandlers } from '../utils/legendEventHandlers';
-import { formatSeriesName } from '../utils/series';
+import { applyHighlightOpacity, formatSeriesName } from '../utils/series';
 import {
   BubbleDatum,
   ENTITY_INDEX,
@@ -40,8 +45,22 @@ import {
   SERIES_INDEX,
   toJsonSafeFilterValue,
 } from './crossFilter';
+import { useSeriesHighlight } from '../hooks/useSeriesHighlight';
+import ChartLegendControls from '../components/ChartLegendControls';
+import { styled } from '@apache-superset/core/theme';
+import { TIMESERIES_CONSTANTS } from '../constants';
 
 const noop = () => {};
+
+const BUBBLE_LEGEND_CONTROLS_WIDTH = 240;
+
+const BubbleLegendControlsOverlay = styled.div`
+  position: absolute;
+  right: 8px;
+  top: 0;
+  width: ${BUBBLE_LEGEND_CONTROLS_WIDTH}px;
+  z-index: 2;
+`;
 
 type BubbleEvent = {
   componentType?: string;
@@ -160,23 +179,109 @@ export default function EchartsBubble(props: BubbleChartTransformedProps) {
     setDataMask,
   ]);
 
+  const echartRef = useRef<EchartsHandler | null>(null);
+  refs.echartRef = echartRef;
+  const dispatchLegendAction = useCallback(
+    (action: { name?: string; seriesName?: string; type: string }) => {
+      echartRef.current?.getEchartInstance()?.dispatchAction(action);
+    },
+    [],
+  );
+
+  const {
+    highlightMode,
+    highlightedSeriesNames,
+    otherSeriesOpacity,
+    setOtherSeriesOpacity,
+    toggleHighlightMode,
+    getLegendSelectChangeHandler,
+  } = useSeriesHighlight({ echartRef, dispatchLegendAction });
+
+  const chartEchartOptions = useMemo(() => {
+    if (
+      !highlightMode ||
+      highlightedSeriesNames.length === 0 ||
+      !Array.isArray(echartOptions.series)
+    ) {
+      return echartOptions;
+    }
+
+    return {
+      ...echartOptions,
+      series: applyHighlightOpacity(
+        echartOptions.series,
+        highlightedSeriesNames,
+        otherSeriesOpacity,
+      ),
+    };
+  }, [
+    echartOptions,
+    highlightMode,
+    highlightedSeriesNames,
+    otherSeriesOpacity,
+  ]);
+
   const legendEventHandlers = useLegendEventHandlers(
     onLegendStateChanged,
     onLegendScroll,
   );
+  const handleLegendSelectChange = getLegendSelectChangeHandler();
+
   const eventHandlers = {
     ...legendEventHandlers,
     ...crossFilterHandlers,
+    legendselectchanged: params => {
+      if (!highlightMode || typeof params.name !== 'string') {
+        legendEventHandlers.legendselectchanged(params);
+        return;
+      }
+      handleLegendSelectChange(params);
+    },
   };
 
-  return (
+  const shouldOverlayLegendControls =
+    height > TIMESERIES_CONSTANTS.compactChartHeight &&
+    formData.showLegend &&
+    formData.legendType === LegendType.Scroll &&
+    formData.legendOrientation === LegendOrientation.Top;
+
+  const chartLegendControls = (
+    <ChartLegendControls
+      highlightMode={highlightMode}
+      onAll={() => dispatchLegendAction({ type: 'legendAllSelect' })}
+      onHighlightToggle={toggleHighlightMode}
+      onInverse={() => dispatchLegendAction({ type: 'legendInverseSelect' })}
+      onOtherSeriesOpacityChange={setOtherSeriesOpacity}
+      otherSeriesOpacity={otherSeriesOpacity}
+      overlay={shouldOverlayLegendControls}
+      showHighlight
+      showSelectors={formData.showSelectorLegend !== false}
+    />
+  );
+
+  const chart = (
     <Echart
       height={height}
       width={width}
-      echartOptions={echartOptions}
+      echartOptions={chartEchartOptions}
       eventHandlers={eventHandlers}
+      ref={echartRef}
       refs={refs}
       vizType={formData.vizType}
     />
+  );
+
+  return shouldOverlayLegendControls ? (
+    <div style={{ position: 'relative', height, width }}>
+      <BubbleLegendControlsOverlay>
+        {chartLegendControls}
+      </BubbleLegendControlsOverlay>
+      {chart}
+    </div>
+  ) : (
+    <>
+      {chartLegendControls}
+      {chart}
+    </>
   );
 }
